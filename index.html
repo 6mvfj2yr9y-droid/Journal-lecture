@@ -109,9 +109,21 @@ body.compact .grid-wrap{flex:1;min-height:0;overflow:auto}
 body.compact table{height:100%}
 body.compact .year-nav{margin-bottom:4px;font-size:.9rem}
 body.compact .year-nav button{width:26px;height:26px;font-size:1rem}
+/* accueil : tout dans l'écran */
+#page-accueil .welcome{padding:14px}
+#page-accueil h2{font-size:1.1rem}
+#page-accueil .stats-grid{grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+#page-accueil .stat-box{padding:8px 2px;font-size:.68rem}
+#page-accueil .stat-box .num{font-size:1.2rem}
+#page-accueil .card[style]{margin-top:10px!important}
+#page-accueil .card p{margin:4px 0 8px!important}
+#page-accueil .nav-btn{padding:8px 18px!important;font-size:1rem!important}
+body.compact #page-accueil.active{flex:1;min-height:0;overflow:auto}
+body.accueil h1{font-size:2.1rem;line-height:1.15}
+body.accueil header{padding:12px 0 16px}
 </style>
 </head>
-<body>
+<body class="compact accueil">
 <header>
 <h1>📖 Mon Journal de Lecture</h1>
 <nav>
@@ -132,6 +144,8 @@ body.compact .year-nav button{width:26px;height:26px;font-size:1rem}
 <div class="stat-box"><div class="num" id="stat-epub">0</div>Epub</div>
 <div class="stat-box"><div class="num" id="stat-pdf">0</div>PDF</div>
 </div>
+<div id="read-days" style="margin-top:12px;font-weight:bold;color:var(--accent)"></div>
+<div id="read-max" style="font-size:.72rem;color:var(--muted);margin-top:2px"></div>
 </div>
 <div style="text-align:center"><button class="nav-btn" style="font-size:1.1rem;padding:12px 24px" onclick="openNewBookSheet()">+ Ajouter une lecture</button></div>
 <div class="card" style="margin-top:20px;text-align:center">
@@ -256,7 +270,8 @@ function showPage(id){
   document.getElementById('page-' + id).classList.add('active');
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
   if (id === 'bibliotheque') renderBookGrid();
-  document.body.classList.toggle('compact', id === 'suivi');
+  document.body.classList.toggle('compact', id === 'suivi' || id === 'accueil');
+  document.body.classList.toggle('accueil', id === 'accueil');
   if (id === 'accueil') updateStats();
   if (id === 'suivi') fillTrackerBooks();
   window.scrollTo(0, 0);
@@ -269,6 +284,7 @@ function updateStats(){
   document.getElementById('stat-wattpad').textContent = c('Wattpad');
   document.getElementById('stat-epub').textContent = c('Epub');
   document.getElementById('stat-pdf').textContent = c('PDF');
+  updateReadStats();
 }
 
 function filterFormat(f){
@@ -485,6 +501,19 @@ function renderTrackerTable(){
   document.getElementById('tracker-table').innerHTML = h;
 }
 
+function updateReadStats(){
+  const dates = Object.keys(trackerData).filter(k => { const st = dayStats(trackerData[k]); return st.p + st.c > 0; }).sort();
+  let best = 0, run = 0, prev = null;
+  for (const k of dates){
+    const t = Date.parse(k + 'T00:00:00Z');
+    run = prev !== null && Math.round((t - prev) / 86400000) === 1 ? run + 1 : 1;
+    if (run > best) best = run;
+    prev = t;
+  }
+  const n = dates.length;
+  document.getElementById('read-days').textContent = `📅 ${n} jour${n > 1 ? 's' : ''} de lecture`;
+  document.getElementById('read-max').textContent = `Record : ${best} jour${best > 1 ? 's' : ''} d’affilée`;
+}
 async function exportData(){
   const name = 'journal-lecture-' + todayLocal() + '.json';
   const blob = new Blob([JSON.stringify({version: 1, books, tracker: trackerData})], {type: 'application/json'});
